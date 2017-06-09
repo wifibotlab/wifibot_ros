@@ -1,0 +1,10 @@
+int32 odom_avg
+int32 odom_avd
+int32 odom_arg
+int32 odom_ard
+float64 tension
+float64 current
+float64 temp
+float64 hygro
+uint8 speed_av
+uint8 speed_ar
