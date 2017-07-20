@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
 	ros::Publisher wifibot_pub = n.advertise<wifibot::wifibot_sensors>("wifibot_sensors", 1000);
 	wifibot::wifibot_sensors wifibot_sensors_msg;
 	
-	ros::Rate loop_rate(1);
+	ros::Rate loop_rate(15);
 
 	Uart *uart = new Uart("/dev/ttyUSB0", 19200);
 	if (uart->Open() <= 0)

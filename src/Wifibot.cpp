@@ -51,7 +51,12 @@ void * Wifibot::write_th(void *arg) {
 		buff[4] = (unsigned char) (wifibot->speed_l>>8 & 0xff);
 		buff[5] = (unsigned char) (wifibot->speed_r & 0xff);
 		buff[6] = (unsigned char) (wifibot->speed_r>>8 & 0xff);
-		buff[7] = 0 + 64 + 0 + 16;
+		buff[7] = 0;
+		if (wifibot->dir_l)
+			buff[7] += 64;
+		
+		if (wifibot->dir_r)
+			buff[7] += 16;
 
 		crc = Wifibot::crc16(buff+1, 7);
 		buff[8] = (unsigned char) (crc & 0xFF);
@@ -59,7 +64,7 @@ void * Wifibot::write_th(void *arg) {
 
 		
 		wifibot->uart->send_str(buff, 10);
-		usleep(100000);
+		usleep(10000);
 
 	}
 }
@@ -90,6 +95,7 @@ void * Wifibot::read_th(void *arg) {
 			state = 1;
 			nbuff = 1;
 			buff[0] = buff_read;
+			//printf("OK MAGIC NUMBER! \n\r");
 		}
 		else if (state == 1) {
 
@@ -213,11 +219,11 @@ void Wifibot::parse_modbus(Wifibot *wifibot) {
                     wifibot->odom_ard += wifibot->buff_modbus[18]<<24;
 
 
-                    wifibot->tension = wifibot->buff_modbus[19] / 10;
-                    wifibot->current = wifibot->buff_modbus[20] / 10;
+                    wifibot->tension = (double)wifibot->buff_modbus[19] /10;
+                    wifibot->current = (double)wifibot->buff_modbus[20] ;
 
-                    wifibot->temp = (double) (wifibot->buff_modbus[21]) / 2;
-                    wifibot->hygro = (double) (wifibot->buff_modbus[22]) / 2;
+                    wifibot->temp = (double)wifibot->buff_modbus[21] / 2;
+                    wifibot->hygro = (double)wifibot->buff_modbus[22] / 2;
 
                     wifibot->speed_av = wifibot->buff_modbus[23];
                     wifibot->speed_ar = wifibot->buff_modbus[24];
@@ -238,7 +244,8 @@ void Wifibot::cmd_callback(const wifibot::wifibot_cmd::ConstPtr& msg) {
 	this->dir_l = msg->dir_l;
 	this->dir_r = msg->dir_r;
 
-	ROS_INFO("OUAIP");
-	printf("%u\n\r", this->speed_r);
+	// ROS_INFO("CMD OK DIRL=(%d)", this->dir_l);
+	// printf("R:%u\n\r", this->speed_r);
+	// printf("L:%u\n\r", this->speed_l);
 }
 
