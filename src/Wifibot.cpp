@@ -13,6 +13,21 @@ Wifibot::Wifibot(Uart *uart, ros::NodeHandle *nh) {
 	this->speed_r = 0;
 
 	this->nh = nh;
+
+	this->odom_avg = 0;
+	this->odom_avd = 0;
+	this->odom_arg = 0;
+	this->odom_ard = 0;
+
+	this->tension = 0;
+	this->current = 0;
+	this->temp = 0;
+	this->hygro = 0;
+
+	this->dir_l = false;
+	this->dir_r = false;
+
+	this->wtd = 0;
 }
 
 void Wifibot::run() {
