@@ -34,7 +34,7 @@ void Wifibot::run() {
 	
 	int tmp;
 
-	// this->nh->subscribe("wifibot_cmd", 1, &Wifibot::cmd_callback, this);
+	 this->nh->subscribe("wifibot_cmd", 1, &Wifibot::cmd_callback, this);
 
 	pthread_t thread_read, thread_write;
 
@@ -57,28 +57,32 @@ void * Wifibot::write_th(void *arg) {
 
 	short crc;
 
+	unsigned int l, r;
+
 	while (1) {
-		
-		buff[0] = MODBUS_SYNC_BYTE;
-		buff[1] = 8;
-		buff[2] = MODBUS_CMD_SPEED;
-		buff[3] = (unsigned char) (wifibot->speed_l & 0xff);
-		buff[4] = (unsigned char) (wifibot->speed_l>>8 & 0xff);
-		buff[5] = (unsigned char) (wifibot->speed_r & 0xff);
-		buff[6] = (unsigned char) (wifibot->speed_r>>8 & 0xff);
-		buff[7] = 0;
-		if (wifibot->dir_l)
-			buff[7] += 64;
-		
-		if (wifibot->dir_r)
-			buff[7] += 16;
 
-		crc = Wifibot::crc16(buff+1, 7);
-		buff[8] = (unsigned char) (crc & 0xFF);
-		buff[9] = (unsigned char) ((crc>>8) & 0xFF);
+		l = wifibot->speed_cmd_l / 273; // 240 max
+		r = wifibot->speed_cmd_r / 273; // 240 max
+
+		buff[0] = 255;
+		buff[1] = 7;
+		buff[2] = (unsigned char) (l & 0xff);
+		buff[3] = (unsigned char) 0;
+		buff[4] = (unsigned char) (r & 0xff);
+		buff[5] = (unsigned char) 0;
+		buff[6] = 0;
+		if (!wifibot->dir_l)
+			buff[6] += 64;
+		
+		if (!wifibot->dir_r)
+			buff[6] += 16;
+
+		crc = Wifibot::crc16(buff+1, 6);
+		buff[7] = (unsigned char) (crc & 0xFF);
+		buff[8] = (unsigned char) ((crc>>8) & 0xFF);
 
 		
-		wifibot->uart->send_str(buff, 10);
+		wifibot->uart->send_str(buff, 9);
 		usleep(10000);
 
 	}
@@ -105,26 +109,26 @@ void * Wifibot::read_th(void *arg) {
 	while (1) {
 		
 		buff_read = wifibot->uart->get_char();
-		if (buff_read == 0xfe && state == 0)  {
+		if (buff_read == 0xff && state == 0)  {
 
 			state = 1;
 			nbuff = 1;
 			buff[0] = buff_read;
-			//printf("OK MAGIC NUMBER! \n\r");
+		//	printf("OK MAGIC NUMBER! \n\r");
 		}
 		else if (state == 1) {
 
 			buff[nbuff] = buff_read;
 			
-			if (nbuff == (buff[1]+1)) { // buff[1]: packet size
-				crc_r = Wifibot::crc16(buff+1, (unsigned char) (nbuff-2));
+			if (nbuff == 21) { // packet size = 21
+				crc_r = Wifibot::crc16(buff+1, (unsigned char) 19);
 
 				if ( (buff[nbuff-1] == (crc_r&0xFF) ) && (buff[nbuff] == ((crc_r>>8)&0xFF)) ) {
-					//printf("CRC OK !!!\r\n");
+				//	printf("CRC OK !!!\r\n");
 					state = 0;
 					for (int i=0;i<nbuff;i++)
-						wifibot->buff_modbus[i] = buff[i];
-					Wifibot::parse_modbus(wifibot);
+						wifibot->buff_recep[i] = buff[i];
+					Wifibot::parse_recep(wifibot);
 				}
 				else
 				{
@@ -132,7 +136,7 @@ void * Wifibot::read_th(void *arg) {
 				}
 
 			}
-			if (nbuff > (buff[1]+1)) {
+			if (nbuff > 22) {
 				state = 0;
 				printf("Uart error \n\r");
 			}
@@ -175,12 +179,12 @@ double Wifibot::get_current() {
 	return this->current;
 }
 
-unsigned char Wifibot::get_speed_av() {
-	return this->speed_av;
+unsigned char Wifibot::get_speed_r() {
+	return this->speed_r;
 }
 
-unsigned char Wifibot::get_speed_ar() {
-	return this->speed_ar;
+unsigned char Wifibot::get_speed_l() {
+	return this->speed_l;
 }
 
 short Wifibot::crc16(unsigned char *adresse_tab , unsigned char taille_max) {
@@ -208,59 +212,37 @@ short Wifibot::crc16(unsigned char *adresse_tab , unsigned char taille_max) {
     return(Crc);
 }
 
-void Wifibot::parse_modbus(Wifibot *wifibot) {
-	switch (wifibot->buff_modbus[2]) {
+void Wifibot::parse_recep(Wifibot *wifibot) {
 
-                case MODBUS_STREAM:
-
-                    wifibot->odom_avg =  wifibot->buff_modbus[3];
-                    wifibot->odom_avg += wifibot->buff_modbus[4]<<8;
-                    wifibot->odom_avg += wifibot->buff_modbus[5]<<16;
-                    wifibot->odom_avg += wifibot->buff_modbus[6]<<24;
-
-                    wifibot->odom_avd =  wifibot->buff_modbus[7];
-                    wifibot->odom_avd += wifibot->buff_modbus[8]<<8;
-                    wifibot->odom_avd += wifibot->buff_modbus[9]<<16;
-                    wifibot->odom_avd += wifibot->buff_modbus[10]<<24;
-
-                    wifibot->odom_arg =  wifibot->buff_modbus[11];
-                    wifibot->odom_arg += wifibot->buff_modbus[12]<<8;
-                    wifibot->odom_arg += wifibot->buff_modbus[13]<<16;
-                    wifibot->odom_arg += wifibot->buff_modbus[14]<<24;
-
-                    wifibot->odom_ard =  wifibot->buff_modbus[15];
-                    wifibot->odom_ard += wifibot->buff_modbus[16]<<8;
-                    wifibot->odom_ard += wifibot->buff_modbus[17]<<16;
-                    wifibot->odom_ard += wifibot->buff_modbus[18]<<24;
+	wifibot->speed_l = (wifibot->buff_recep[1] | wifibot->buff_recep[2] << 8);
+	wifibot->speed_r = (wifibot->buff_recep[10] | wifibot->buff_recep[11] << 8);
 
 
-                    wifibot->tension = (double)wifibot->buff_modbus[19] /10;
-                    wifibot->current = (double)wifibot->buff_modbus[20] ;
+	wifibot->odom_avg =  wifibot->buff_recep[6];
+	wifibot->odom_avg += wifibot->buff_recep[7]<<8;
+	wifibot->odom_avg += wifibot->buff_recep[8]<<16;
+	wifibot->odom_avg += wifibot->buff_recep[9]<<24;
 
-                    wifibot->temp = (double)wifibot->buff_modbus[21] / 2;
-                    wifibot->hygro = (double)wifibot->buff_modbus[22] / 2;
+	wifibot->odom_avd =  wifibot->buff_recep[14];
+	wifibot->odom_avd += wifibot->buff_recep[15]<<8;
+	wifibot->odom_avd += wifibot->buff_recep[16]<<16;
+	wifibot->odom_avd += wifibot->buff_recep[17]<<24;
 
-                    wifibot->speed_av = wifibot->buff_modbus[23];
-                    wifibot->speed_ar = wifibot->buff_modbus[24];
-                    break;
-
-                default:
-		    
-                    break;
-            }
+	wifibot->tension = (double)wifibot->buff_recep[3];
+	wifibot->current = (double)wifibot->buff_recep[18] ;
 
 }
 
 void Wifibot::cmd_callback(const wifibot::wifibot_cmd::ConstPtr& msg) {
 	
-	this->speed_l = msg->speed_l;
-	this->speed_r = msg->speed_r;
+	this->speed_cmd_l = msg->speed_l;
+	this->speed_cmd_r = msg->speed_r;
 	
 	this->dir_l = msg->dir_l;
 	this->dir_r = msg->dir_r;
 
 	// ROS_INFO("CMD OK DIRL=(%d)", this->dir_l);
-	// printf("R:%u\n\r", this->speed_r);
-	// printf("L:%u\n\r", this->speed_l);
+	 printf("R:%u\n\r", this->speed_cmd_r);
+	 printf("L:%u\n\r", this->speed_cmd_l);
 }
 

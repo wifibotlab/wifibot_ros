@@ -6,5 +6,5 @@ float64 tension
 float64 current
 float64 temp
 float64 hygro
-uint8 speed_av
-uint8 speed_ar
+uint8 speed_l
+uint8 speed_r

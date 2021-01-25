@@ -52,12 +52,11 @@ class Wifibot {
 		double get_tension();
 		double get_current();
 
-		unsigned char get_speed_av();
-		unsigned char get_speed_ar();
-
+		unsigned char get_speed_r();
+		unsigned char get_speed_l();
 
 		static short crc16(unsigned char *adresse_tab, unsigned char taille_max);
-		static void parse_modbus(Wifibot *wifibot);
+		static void parse_recep(Wifibot *wifibot);
 
 		void cmd_callback(const wifibot::wifibot_cmd::ConstPtr& msg);
 
@@ -76,19 +75,19 @@ class Wifibot {
 		double temp;
 		double hygro;
 
-		unsigned char speed_av;
-		unsigned char speed_ar;
+		unsigned char speed_l;
+		unsigned char speed_r;
+
+		signed int speed_cmd_l;
+		signed int speed_cmd_r;
 
 		unsigned int wtd;	
-
-		unsigned short speed_l;
-		unsigned short speed_r;
 		bool dir_l;
 		bool dir_r;
 
 		Uart *uart;
 
-		unsigned char buff_modbus[256];
+		unsigned char buff_recep[256];
 
 		ros::NodeHandle *nh;
 };

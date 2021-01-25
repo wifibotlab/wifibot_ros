@@ -40,7 +40,7 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 
 int main(int argc, char **argv)
 {
-       	ros::init(argc, argv, "teleop");
+    ros::init(argc, argv, "teleop");
 
 	ros::NodeHandle n;
 

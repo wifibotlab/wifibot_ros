@@ -40,8 +40,8 @@ int main(int argc, char **argv) {
 		wifibot_sensors_msg.tension= wifibot->get_tension();
 		wifibot_sensors_msg.current = wifibot->get_current();
 
-		wifibot_sensors_msg.speed_av = wifibot->get_speed_av();
-		wifibot_sensors_msg.speed_ar = wifibot->get_speed_ar();
+		wifibot_sensors_msg.speed_l = wifibot->get_speed_l();
+		wifibot_sensors_msg.speed_r = wifibot->get_speed_r();
 		
 		wifibot_pub.publish(wifibot_sensors_msg);
 
